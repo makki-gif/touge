@@ -41,7 +41,7 @@
   .popup-row { font-size:12.5px; color:#333; margin:1px 0; }
   .mtn-label {
     background:transparent; border:none; box-shadow:none;
-    font-size:11px; font-weight:600; color:#1a1a1a;
+    font-size:13px; font-weight:600; color:#1a1a1a;
     text-shadow:-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px #fff;
     white-space:nowrap;
   }
@@ -72,7 +72,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-const clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40, disableClusteringAtZoom: 11 });
+// クラスタリングはせず、常に個別のピンと山名を表示する
+const clusterGroup = L.layerGroup();
 
 function colorFor(status) {
   if (status === '推奨') return '#2e7d32';
@@ -135,9 +136,7 @@ function goTo(name) {
   const info = markerByName[name];
   if (!info) return;
   map.setView([info.lat, info.lon], 14, { animate: true });
-  clusterGroup.zoomToShowLayer(info.marker, function() {
-    info.marker.openPopup();
-  });
+  info.marker.openPopup();
   resultsBox.innerHTML = '';
   input.value = name;
 }
