@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2027年度 山行計画候補地マップ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+  html, body { margin:0; padding:0; height:100%; font-family: -apple-system, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+  #map { width:100%; height:100vh; }
+  .legend {
+    position:absolute; top:10px; right:10px; z-index:1000;
+    background:white; padding:10px 14px; border-radius:8px;
+    box-shadow:0 1px 6px rgba(0,0,0,0.3); font-size:13px; line-height:1.6;
+  }
+  .legend div { display:flex; align-items:center; gap:6px; margin:2px 0; }
+  .dot { width:12px; height:12px; border-radius:50%; display:inline-block; border:1px solid #0003; }
+  .title-box {
+    position:absolute; top:10px; left:50px; z-index:1000;
+    background:white; padding:8px 14px; border-radius:8px;
+    box-shadow:0 1px 6px rgba(0,0,0,0.3); font-size:15px; font-weight:bold;
+  }
+  .search-box {
+    position:absolute; top:56px; left:50px; z-index:1000; width:240px;
+  }
+  .search-box input {
+    width:100%; box-sizing:border-box; padding:8px 10px; font-size:14px;
+    border-radius:8px; border:1px solid #bbb; box-shadow:0 1px 6px rgba(0,0,0,0.2);
+  }
+  .search-results {
+    margin-top:4px; background:white; border-radius:8px; overflow:hidden;
+    box-shadow:0 1px 6px rgba(0,0,0,0.3); max-height:260px; overflow-y:auto;
+  }
+  .search-results div {
+    padding:7px 10px; font-size:13px; cursor:pointer; border-bottom:1px solid #eee;
+  }
+  .search-results div:hover { background:#f0f4ff; }
+  .popup-name { font-size:15px; font-weight:bold; margin-bottom:4px; }
+  .popup-row { font-size:12.5px; color:#333; margin:1px 0; }
+  .mtn-label {
+    background:transparent; border:none; box-shadow:none;
+    font-size:11px; font-weight:600; color:#1a1a1a;
+    text-shadow:-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 3px #fff;
+    white-space:nowrap;
+  }
+  .mtn-label::before { display:none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="title-box">2027年度 山行計画案 候補地マップ（山 135 座）</div>
+<div class="search-box">
+  <input id="search-input" type="text" placeholder="山の名前で検索..." autocomplete="off" />
+  <div class="search-results" id="search-results"></div>
+</div>
+<div class="legend">
+  <div><span class="dot" style="background:#2e7d32;"></span>○ 推奨</div>
+  <div><span class="dot" style="background:#c62828;"></span>× 非推奨</div>
+  <div><span class="dot" style="background:#9e9e9e;"></span>未評価</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const mountains = [{"no": "1/105", "name": "田代山", "region": "南会津", "regions_all": ["南会津"], "pref": "福島県", "elev": "1926", "status": "推奨", "lat": 36.9742, "lon": 139.4783, "dup_count": 2}, {"no": "2", "name": "那須岳", "region": "那須", "regions_all": ["那須"], "pref": "栃木県", "elev": "1915", "status": "推奨", "lat": 37.1225, "lon": 139.9633, "dup_count": 1}, {"no": "3/109", "name": "子持山", "region": "上信越", "regions_all": ["ぐんま百名山", "上信越"], "pref": "群馬県", "elev": "1296", "status": "非推奨", "lat": 36.592, "lon": 138.9977, "dup_count": 2}, {"no": "4/111", "name": "湯ノ丸山", "region": "上信越", "regions_all": ["上信越", "浅間山周辺"], "pref": "群馬県", "elev": "2101", "status": "推奨", "lat": 36.4349, "lon": 138.4008, "dup_count": 2}, {"no": "5", "name": "玉原高原", "region": "上信越", "regions_all": ["上信越"], "pref": "群馬県", "elev": "", "status": "推奨", "lat": 36.7869, "lon": 139.0625, "dup_count": 1}, {"no": "6", "name": "迦葉山", "region": "上信越", "regions_all": ["上信越"], "pref": "群馬県", "elev": "", "status": "非推奨", "lat": 36.7597, "lon": 139.0619, "dup_count": 1}, {"no": "7", "name": "鳴神山", "region": "上信越", "regions_all": ["上信越"], "pref": "群馬県", "elev": "980", "status": "", "lat": 36.49, "lon": 139.3611, "dup_count": 1}, {"no": "8", "name": "桟敷山", "region": "浅間", "regions_all": ["浅間"], "pref": "群馬県", "elev": "1931", "status": "推奨", "lat": 36.4422, "lon": 138.4269, "dup_count": 1}, {"no": "9", "name": "黒檜山", "region": "赤城", "regions_all": ["赤城"], "pref": "群馬県", "elev": "1828", "status": "推奨", "lat": 36.5603, "lon": 139.1931, "dup_count": 1}, {"no": "10", "name": "切込刈込湖", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "", "status": "推奨", "lat": 36.8242, "lon": 139.4339, "dup_count": 1}, {"no": "11", "name": "半月山", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "1753", "status": "推奨", "lat": 36.7106, "lon": 139.4758, "dup_count": 1}, {"no": "12", "name": "日光白根山", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "2578", "status": "", "lat": 36.7986, "lon": 139.3758, "dup_count": 1}, {"no": "13", "name": "ミツモチ山", "region": "高原山", "regions_all": ["高原山"], "pref": "栃木県", "elev": "1248", "status": "推奨", "lat": 36.8867, "lon": 139.8155, "dup_count": 1}, {"no": "14", "name": "釈迦ヶ岳", "region": "高原山", "regions_all": ["高原山"], "pref": "栃木県", "elev": "1794", "status": "", "lat": 36.9, "lon": 139.7767, "dup_count": 1}, {"no": "15", "name": "鶏頂山", "region": "高原山", "regions_all": ["高原山"], "pref": "栃木県", "elev": "1762", "status": "", "lat": 36.9006, "lon": 139.7628, "dup_count": 1}, {"no": "16", "name": "塩原自然研究路", "region": "塩原", "regions_all": ["塩原"], "pref": "栃木県", "elev": "1184", "status": "", "lat": 36.9686, "lon": 139.8232, "dup_count": 1}, {"no": "17", "name": "甘利山", "region": "南アルプス前衛", "regions_all": ["南アルプス前衛"], "pref": "山梨県", "elev": "2193", "status": "", "lat": 35.682, "lon": 138.3764, "dup_count": 1}, {"no": "18/117/118", "name": "北横岳", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳", "八ヶ岳・霧ヶ峰", "八ヶ岳連峰"], "pref": "長野県", "elev": "2480", "status": "", "lat": 36.0879, "lon": 138.3204, "dup_count": 3}, {"no": "19", "name": "根子岳", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳・霧ヶ峰"], "pref": "長野県", "elev": "2207", "status": "推奨", "lat": 36.55, "lon": 138.3957, "dup_count": 1}, {"no": "20", "name": "美ヶ原高原", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳・霧ヶ峰"], "pref": "長野県", "elev": "2034", "status": "", "lat": 36.2268, "lon": 138.095, "dup_count": 1}, {"no": "21", "name": "霧ヶ峰", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳・霧ヶ峰"], "pref": "長野県", "elev": "1925", "status": "", "lat": 36.1167, "lon": 138.1833, "dup_count": 1}, {"no": "22", "name": "難台山", "region": "茨城", "regions_all": ["茨城"], "pref": "茨城県", "elev": "553", "status": "推奨", "lat": 36.3051, "lon": 140.2224, "dup_count": 1}, {"no": "23", "name": "高鈴山", "region": "茨城", "regions_all": ["茨城"], "pref": "茨城県", "elev": "623", "status": "推奨", "lat": 36.6221, "lon": 140.5884, "dup_count": 1}, {"no": "24", "name": "雨引山", "region": "茨城", "regions_all": ["茨城"], "pref": "茨城県", "elev": "409", "status": "推奨", "lat": 36.3371, "lon": 140.1222, "dup_count": 1}, {"no": "25", "name": "大小山", "region": "栃木", "regions_all": ["栃木"], "pref": "栃木県", "elev": "282", "status": "推奨", "lat": 36.3343, "lon": 139.517, "dup_count": 1}, {"no": "26", "name": "高原山", "region": "栃木", "regions_all": ["栃木"], "pref": "栃木県", "elev": "1795", "status": "推奨", "lat": 36.9, "lon": 139.7767, "dup_count": 1}, {"no": "27", "name": "雨巻山", "region": "栃木", "regions_all": ["栃木"], "pref": "栃木県", "elev": "533", "status": "推奨", "lat": 36.4176, "lon": 140.1425, "dup_count": 1}, {"no": "28", "name": "三床山", "region": "佐野", "regions_all": ["佐野"], "pref": "栃木県", "elev": "350", "status": "推奨", "lat": 36.3964, "lon": 139.5548, "dup_count": 1}, {"no": "29", "name": "三毳山", "region": "佐野", "regions_all": ["佐野"], "pref": "栃木県", "elev": "300", "status": "推奨", "lat": 36.3168, "lon": 139.6286, "dup_count": 1}, {"no": "30", "name": "御荷鉾山", "region": "西上州", "regions_all": ["西上州"], "pref": "群馬県", "elev": "1287", "status": "推奨", "lat": 36.1528, "lon": 138.9183, "dup_count": 1}, {"no": "31", "name": "神成山", "region": "西上州", "regions_all": ["西上州"], "pref": "群馬県", "elev": "328", "status": "推奨", "lat": 36.2476, "lon": 138.8324, "dup_count": 1}, {"no": "32/123", "name": "金峰山", "region": "奥秩父", "regions_all": ["奥秩父"], "pref": "山梨県", "elev": "2599", "status": "", "lat": 35.8722, "lon": 138.6254, "dup_count": 2}, {"no": "33", "name": "横尾山", "region": "奥秩父", "regions_all": ["奥秩父"], "pref": "長野県", "elev": "1818", "status": "推奨", "lat": 35.9196, "lon": 138.5215, "dup_count": 1}, {"no": "34", "name": "甲武信ヶ岳", "region": "奥秩父", "regions_all": ["奥秩父"], "pref": "埼玉県", "elev": "2475", "status": "", "lat": 35.91, "lon": 138.7291, "dup_count": 1}, {"no": "35", "name": "二本木峠", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "", "status": "", "lat": 36.065, "lon": 139.1587, "dup_count": 1}, {"no": "36", "name": "伊豆ヶ岳", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "851", "status": "", "lat": 35.9273, "lon": 139.1607, "dup_count": 1}, {"no": "37", "name": "棒ノ折山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "969", "status": "推奨", "lat": 35.8592, "lon": 139.155, "dup_count": 1}, {"no": "38", "name": "登谷山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "668", "status": "", "lat": 36.0833, "lon": 139.1559, "dup_count": 1}, {"no": "39", "name": "蕨山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "1044", "status": "", "lat": 35.8969, "lon": 139.1326, "dup_count": 1}, {"no": "40", "name": "釜伏山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "582", "status": "推奨", "lat": 36.0935, "lon": 139.1438, "dup_count": 1}, {"no": "41", "name": "関八州見晴台", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "771", "status": "推奨", "lat": 35.9462, "lon": 139.222, "dup_count": 1}, {"no": "42", "name": "戸倉城山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "434", "status": "", "lat": 35.75, "lon": 139.25, "dup_count": 1}, {"no": "43", "name": "鹿倉山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "1288", "status": "非推奨", "lat": 35.771, "lon": 138.95, "dup_count": 1}, {"no": "44", "name": "今熊山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "", "status": "", "lat": 35.7108, "lon": 139.2161, "dup_count": 1}, {"no": "45", "name": "倉戸山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "1169", "status": "非推奨", "lat": 35.7942, "lon": 139.029, "dup_count": 1}, {"no": "46", "name": "大岳山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "1266", "status": "", "lat": 35.7657, "lon": 139.1304, "dup_count": 1}, {"no": "47", "name": "天狗岩", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "412", "status": "", "lat": 35.7709, "lon": 139.2349, "dup_count": 1}, {"no": "48", "name": "奈良倉山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "山梨県", "elev": "", "status": "", "lat": 35.7217, "lon": 138.9667, "dup_count": 1}, {"no": "49/51", "name": "御前山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "1405", "status": "", "lat": 35.7708, "lon": 139.081, "dup_count": 2}, {"no": "50", "name": "川苔山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "1363", "status": "", "lat": 35.8517, "lon": 139.1069, "dup_count": 1}, {"no": "52", "name": "浅間嶺", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "903", "status": "", "lat": 35.721, "lon": 139.1023, "dup_count": 1}, {"no": "53", "name": "生藤山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "神奈川県", "elev": "1019", "status": "", "lat": 35.673, "lon": 139.1329, "dup_count": 1}, {"no": "54", "name": "笹尾根", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "", "status": "", "lat": 35.7027, "lon": 139.0587, "dup_count": 1}, {"no": "55", "name": "高水三山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "793", "status": "推奨", "lat": 35.8291, "lon": 139.1887, "dup_count": 1}, {"no": "56", "name": "鶴寝山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "山梨県", "elev": "1368", "status": "", "lat": 35.7341, "lon": 138.9434, "dup_count": 1}, {"no": "57", "name": "三ツ峠山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1785", "status": "", "lat": 35.5498, "lon": 138.8091, "dup_count": 1}, {"no": "58", "name": "今倉山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1470", "status": "", "lat": 35.5217, "lon": 138.9747, "dup_count": 1}, {"no": "59", "name": "八重山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "542", "status": "推奨", "lat": 35.6498, "lon": 139.1138, "dup_count": 1}, {"no": "60", "name": "倉見山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1256", "status": "非推奨", "lat": 35.5087, "lon": 138.856, "dup_count": 1}, {"no": "61", "name": "坪山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1103", "status": "", "lat": 35.7001, "lon": 138.9984, "dup_count": 1}, {"no": "62", "name": "岩殿山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "634", "status": "", "lat": 35.6223, "lon": 138.9498, "dup_count": 1}, {"no": "63", "name": "御坂黒岳", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1793", "status": "", "lat": 35.5, "lon": 138.75, "dup_count": 1}, {"no": "64", "name": "扇山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1138", "status": "", "lat": 35.6167, "lon": 139.0, "dup_count": 1}, {"no": "65", "name": "滝子山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1615", "status": "非推奨", "lat": 35.5667, "lon": 138.85, "dup_count": 1}, {"no": "66", "name": "百蔵山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1003", "status": "", "lat": 35.639, "lon": 138.9805, "dup_count": 1}, {"no": "67", "name": "大平山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1413", "status": "推奨", "lat": 35.4398, "lon": 138.879, "dup_count": 1}, {"no": "68", "name": "神楽山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "", "status": "非推奨", "lat": 35.6026, "lon": 138.9649, "dup_count": 1}, {"no": "69", "name": "竜ヶ岳", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1483", "status": "推奨", "lat": 35.4474, "lon": 138.5836, "dup_count": 1}, {"no": "70", "name": "茅ヶ岳", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "1704", "status": "推奨", "lat": 35.7955, "lon": 138.5135, "dup_count": 1}, {"no": "71", "name": "要害山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "536", "status": "", "lat": 35.6474, "lon": 139.0874, "dup_count": 1}, {"no": "72", "name": "高川山", "region": "中央線沿線", "regions_all": ["中央線沿線"], "pref": "山梨県", "elev": "976", "status": "推奨", "lat": 35.5667, "lon": 138.9, "dup_count": 1}, {"no": "73", "name": "小金沢山", "region": "大菩薩", "regions_all": ["大菩薩"], "pref": "山梨県", "elev": "2014", "status": "", "lat": 35.7169, "lon": 138.8567, "dup_count": 1}, {"no": "74", "name": "三窪高原", "region": "大菩薩", "regions_all": ["大菩薩"], "pref": "山梨県", "elev": "1732", "status": "推奨", "lat": 35.7819, "lon": 138.7867, "dup_count": 1}, {"no": "75", "name": "三方分山", "region": "富士・御坂", "regions_all": ["富士・御坂"], "pref": "山梨県", "elev": "1422", "status": "推奨", "lat": 35.5056, "lon": 138.6025, "dup_count": 1}, {"no": "76", "name": "石割山", "region": "富士・御坂", "regions_all": ["富士・御坂"], "pref": "山梨県", "elev": "1413", "status": "推奨", "lat": 35.4519, "lon": 138.9014, "dup_count": 1}, {"no": "77", "name": "春日沢の頭", "region": "富士・御坂", "regions_all": ["富士・御坂"], "pref": "山梨県", "elev": "1235", "status": "推奨", "lat": 35.5689, "lon": 138.6633, "dup_count": 1}, {"no": "78", "name": "大山三峰山", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "935", "status": "", "lat": 35.4655, "lon": 139.2449, "dup_count": 1}, {"no": "79", "name": "シダンゴ山", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "758", "status": "", "lat": 35.4095, "lon": 139.1235, "dup_count": 1}, {"no": "80", "name": "ユーシン渓谷", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "", "status": "", "lat": 35.4467, "lon": 139.1171, "dup_count": 1}, {"no": "81/140/141", "name": "大山", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "1252", "status": "推奨", "lat": 35.4419, "lon": 139.2311, "dup_count": 3}, {"no": "82/142", "name": "大野山", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "723", "status": "", "lat": 35.3869, "lon": 139.0487, "dup_count": 2}, {"no": "83", "name": "経ヶ岳", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "633", "status": "", "lat": 35.5077, "lon": 139.2749, "dup_count": 1}, {"no": "84", "name": "仏果山", "region": "丹沢", "regions_all": ["丹沢"], "pref": "神奈川県", "elev": "747", "status": "", "lat": 35.521, "lon": 139.2582, "dup_count": 1}, {"no": "85", "name": "石老山", "region": "神奈川", "regions_all": ["神奈川"], "pref": "神奈川県", "elev": "702", "status": "推奨", "lat": 35.586, "lon": 139.189, "dup_count": 1}, {"no": "86", "name": "鎌倉アルプス", "region": "三浦・鎌倉", "regions_all": ["三浦・鎌倉"], "pref": "神奈川県", "elev": "159", "status": "推奨", "lat": 35.3333, "lon": 139.5667, "dup_count": 1}, {"no": "87/147", "name": "天城山", "region": "伊豆", "regions_all": ["伊豆"], "pref": "静岡県", "elev": "1405", "status": "非推奨", "lat": 34.8697, "lon": 139.0281, "dup_count": 2}, {"no": "88", "name": "富山", "region": "房総", "regions_all": ["房総"], "pref": "千葉県", "elev": "349", "status": "", "lat": 35.0968, "lon": 139.8821, "dup_count": 1}, {"no": "89/149", "name": "鋸山", "region": "房総", "regions_all": ["房総", "房総丘陵"], "pref": "千葉県", "elev": "329", "status": "推奨", "lat": 35.1614, "lon": 139.841, "dup_count": 2}, {"no": "90", "name": "月山", "region": "東北", "regions_all": ["東北"], "pref": "山形県", "elev": "1984", "status": "非推奨", "lat": 38.5486, "lon": 140.0286, "dup_count": 1}, {"no": "91", "name": "安達太良山", "region": "東北", "regions_all": ["東北"], "pref": "福島県", "elev": "1700", "status": "推奨", "lat": 37.6216, "lon": 140.2879, "dup_count": 1}, {"no": "92", "name": "栗駒山", "region": "東北", "regions_all": ["東北"], "pref": "宮城県", "elev": "1626", "status": "非推奨", "lat": 38.9583, "lon": 140.7917, "dup_count": 1}, {"no": "93", "name": "磐梯山", "region": "東北", "regions_all": ["東北"], "pref": "福島県", "elev": "1816", "status": "", "lat": 37.6016, "lon": 140.0722, "dup_count": 1}, {"no": "94", "name": "会津駒ヶ岳", "region": "南会津", "regions_all": ["南会津"], "pref": "福島県", "elev": "2133", "status": "", "lat": 37.0481, "lon": 139.3538, "dup_count": 1}, {"no": "95", "name": "尾瀬ヶ原", "region": "上越", "regions_all": ["上越"], "pref": "群馬県", "elev": "", "status": "", "lat": 36.9167, "lon": 139.2, "dup_count": 1}, {"no": "96", "name": "火打山", "region": "頸城", "regions_all": ["頸城"], "pref": "新潟県", "elev": "2462", "status": "", "lat": 36.9234, "lon": 138.0683, "dup_count": 1}, {"no": "97/113/114", "name": "乗鞍岳", "region": "北アルプス", "regions_all": ["北アルプス"], "pref": "長野県", "elev": "3026", "status": "", "lat": 36.1067, "lon": 137.5544, "dup_count": 3}, {"no": "98", "name": "唐松岳", "region": "北アルプス", "regions_all": ["北アルプス"], "pref": "長野県", "elev": "2696", "status": "非推奨", "lat": 36.6881, "lon": 137.7549, "dup_count": 1}, {"no": "99/116", "name": "木曽駒ヶ岳", "region": "中央アルプス", "regions_all": ["中央アルプス"], "pref": "長野県", "elev": "2956", "status": "", "lat": 35.7897, "lon": 137.8092, "dup_count": 2}, {"no": "100", "name": "野反湖", "region": "上信越", "regions_all": ["上信越"], "pref": "群馬県", "elev": "1514", "status": "非推奨", "lat": 36.7081, "lon": 138.6462, "dup_count": 1}, {"no": "101", "name": "鬼怒沼山", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "2140", "status": "", "lat": 36.9167, "lon": 139.35, "dup_count": 1}, {"no": "102", "name": "奥鬼怒湿原", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "", "status": "", "lat": 36.9167, "lon": 139.35, "dup_count": 1}, {"no": "103/119", "name": "蓼科山", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳", "八ヶ岳・霧ヶ峰"], "pref": "長野県", "elev": "2530", "status": "推奨", "lat": 36.1046, "lon": 138.2949, "dup_count": 2}, {"no": "104", "name": "横手山", "region": "八ヶ岳・霧ヶ峰", "regions_all": ["八ヶ岳・霧ヶ峰"], "pref": "長野県", "elev": "2305", "status": "推奨", "lat": 36.7, "lon": 138.5167, "dup_count": 1}, {"no": "106", "name": "立山", "region": "北アルプス", "regions_all": ["北アルプス"], "pref": "富山県", "elev": "3015", "status": "非推奨", "lat": 36.5756, "lon": 137.6203, "dup_count": 1}, {"no": "107", "name": "龍王峡", "region": "日光", "regions_all": ["日光"], "pref": "栃木県", "elev": "", "status": "", "lat": 36.8647, "lon": 139.7135, "dup_count": 1}, {"no": "108", "name": "月居山", "region": "大子アルプス", "regions_all": ["大子アルプス"], "pref": "茨城県", "elev": "403", "status": "", "lat": 36.7589, "lon": 140.4052, "dup_count": 1}, {"no": "110", "name": "四阿山", "region": "四阿火山群", "regions_all": ["四阿火山群"], "pref": "群馬県", "elev": "2354", "status": "", "lat": 36.5419, "lon": 138.4124, "dup_count": 1}, {"no": "112", "name": "掃部ヶ岳", "region": "榛名山", "regions_all": ["榛名山"], "pref": "群馬県", "elev": "1449", "status": "推奨", "lat": 36.4778, "lon": 138.851, "dup_count": 1}, {"no": "115", "name": "篭ノ登山", "region": "上信越", "regions_all": ["上信越"], "pref": "長野県", "elev": "2228", "status": "", "lat": 36.4198, "lon": 138.4471, "dup_count": 1}, {"no": "120", "name": "白駒池", "region": "八ヶ岳", "regions_all": ["八ヶ岳"], "pref": "長野県", "elev": "2115", "status": "", "lat": 36.0514, "lon": 138.3617, "dup_count": 1}, {"no": "121", "name": "仙丈ヶ岳", "region": "南アルプス", "regions_all": ["南アルプス"], "pref": "長野県", "elev": "3033", "status": "", "lat": 35.7205, "lon": 138.1835, "dup_count": 1}, {"no": "122", "name": "国師ヶ岳", "region": "奥秩父", "regions_all": ["奥秩父"], "pref": "山梨県", "elev": "2592", "status": "", "lat": 35.8714, "lon": 138.6735, "dup_count": 1}, {"no": "124", "name": "妙法ヶ岳", "region": "秩父", "regions_all": ["秩父"], "pref": "埼玉県", "elev": "1329", "status": "", "lat": 35.9188, "lon": 138.9475, "dup_count": 1}, {"no": "125", "name": "宝登山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "497", "status": "推奨", "lat": 36.0938, "lon": 139.0917, "dup_count": 1}, {"no": "126", "name": "城峯山", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "1038", "status": "", "lat": 36.0983, "lon": 139.0073, "dup_count": 1}, {"no": "127", "name": "ユガテ", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "430", "status": "", "lat": 35.9074, "lon": 139.2688, "dup_count": 1}, {"no": "128", "name": "旧正丸峠", "region": "奥武蔵", "regions_all": ["奥武蔵"], "pref": "埼玉県", "elev": "866", "status": "", "lat": 35.9493, "lon": 139.1666, "dup_count": 1}, {"no": "129", "name": "雁ヶ腹摺山", "region": "大菩薩", "regions_all": ["大菩薩"], "pref": "山梨県", "elev": "1874", "status": "", "lat": 35.6867, "lon": 138.8847, "dup_count": 1}, {"no": "130", "name": "青梅丘陵", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "493", "status": "", "lat": 35.7935, "lon": 139.26, "dup_count": 1}, {"no": "131", "name": "市道山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "842", "status": "", "lat": 35.6907, "lon": 139.1697, "dup_count": 1}, {"no": "132", "name": "御岳山", "region": "奥多摩", "regions_all": ["奥多摩"], "pref": "東京都", "elev": "929", "status": "", "lat": 35.7867, "lon": 139.15, "dup_count": 1}, {"no": "133", "name": "要害山", "region": "山梨百名山", "regions_all": ["山梨百名山"], "pref": "山梨県", "elev": "780", "status": "推奨", "lat": 35.7035, "lon": 138.5983, "dup_count": 1}, {"no": "134", "name": "牛奥ノ雁ヶ腹摺山", "region": "小金沢連嶺", "regions_all": ["小金沢連嶺"], "pref": "山梨県", "elev": "1990", "status": "", "lat": 35.7066, "lon": 138.8576, "dup_count": 1}, {"no": "135", "name": "菊花山", "region": "小金沢連嶺", "regions_all": ["小金沢連嶺"], "pref": "山梨県", "elev": "730", "status": "", "lat": 35.6082, "lon": 138.9475, "dup_count": 1}, {"no": "136", "name": "毛無山", "region": "御坂山地", "regions_all": ["御坂山地"], "pref": "山梨県", "elev": "1500", "status": "", "lat": 35.5167, "lon": 138.75, "dup_count": 1}, {"no": "137", "name": "釈迦が岳", "region": "御坂山地", "regions_all": ["御坂山地"], "pref": "山梨県", "elev": "1641", "status": "推奨", "lat": 35.5637, "lon": 138.716, "dup_count": 1}, {"no": "138", "name": "杓子山", "region": "道志山塊", "regions_all": ["道志山塊"], "pref": "山梨県", "elev": "1596", "status": "", "lat": 35.4833, "lon": 138.8667, "dup_count": 1}, {"no": "139", "name": "宝永山", "region": "富士山", "regions_all": ["富士山"], "pref": "静岡県", "elev": "2690", "status": "", "lat": 35.3444, "lon": 138.7528, "dup_count": 1}, {"no": "143", "name": "鐘ヶ嶽", "region": "神奈川", "regions_all": ["神奈川"], "pref": "神奈川県", "elev": "561", "status": "非推奨", "lat": 35.4602, "lon": 139.2722, "dup_count": 1}, {"no": "144", "name": "金時山", "region": "箱根", "regions_all": ["箱根"], "pref": "神奈川県", "elev": "1212", "status": "推奨", "lat": 35.2907, "lon": 139.0044, "dup_count": 1}, {"no": "145", "name": "鷹取山", "region": "三浦半島", "regions_all": ["三浦半島"], "pref": "神奈川県", "elev": "139", "status": "", "lat": 35.3071, "lon": 139.6123, "dup_count": 1}, {"no": "146", "name": "達磨山", "region": "伊豆", "regions_all": ["伊豆"], "pref": "静岡県", "elev": "982", "status": "", "lat": 34.9554, "lon": 138.8393, "dup_count": 1}, {"no": "148", "name": "竜爪山", "region": "静岡", "regions_all": ["静岡"], "pref": "静岡県", "elev": "1041", "status": "非推奨", "lat": 35.0888, "lon": 138.4033, "dup_count": 1}, {"no": "150", "name": "飯盛山", "region": "八ヶ岳", "regions_all": ["八ヶ岳"], "pref": "長野県", "elev": "1643", "status": "推奨", "lat": 35.9201, "lon": 138.4738, "dup_count": 1}, {"no": "151", "name": "宝篋山", "region": "茨城", "regions_all": ["茨城"], "pref": "茨城県", "elev": "461", "status": "推奨", "lat": 36.1682, "lon": 140.1301, "dup_count": 1}];
+
+const map = L.map('map').setView([36.3, 138.9], 8);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40, disableClusteringAtZoom: 11 });
+
+function colorFor(status) {
+  if (status === '推奨') return '#2e7d32';
+  if (status === '非推奨') return '#c62828';
+  return '#9e9e9e';
+}
+
+const markerByName = {};
+
+mountains.forEach(function(m) {
+  const color = colorFor(m.status);
+  const marker = L.circleMarker([m.lat, m.lon], {
+    radius: 7,
+    fillColor: color,
+    color: '#fff',
+    weight: 1.5,
+    fillOpacity: 0.9
+  });
+  const elev = m.elev ? m.elev + 'm' : '不明';
+  const statusLabel = m.status ? m.status : '未評価';
+  const regionLine = (m.regions_all && m.regions_all.length > 1)
+    ? m.regions_all.join('・') : m.region;
+  const dupNote = (m.dup_count && m.dup_count > 1)
+    ? '<div class="popup-row" style="color:#888;">（候補リストに' + m.dup_count + '件重複していたためまとめて表示）</div>' : '';
+  marker.bindPopup(
+    '<div class="popup-name">No.' + m.no + ' ' + m.name + '</div>' +
+    '<div class="popup-row">山域: ' + regionLine + '（' + m.pref + '）</div>' +
+    '<div class="popup-row">標高: ' + elev + '</div>' +
+    '<div class="popup-row">評価: ' + statusLabel + '</div>' +
+    dupNote
+  );
+  marker.bindTooltip(m.name, {
+    permanent: true,
+    direction: 'right',
+    offset: [8, 0],
+    className: 'mtn-label'
+  });
+  clusterGroup.addLayer(marker);
+  markerByName[m.name] = { marker: marker, lat: m.lat, lon: m.lon };
+});
+
+map.addLayer(clusterGroup);
+
+// --- name search ---
+const input = document.getElementById('search-input');
+const resultsBox = document.getElementById('search-results');
+const names = mountains.map(m => m.name);
+
+function renderResults(matches) {
+  resultsBox.innerHTML = '';
+  matches.slice(0, 10).forEach(function(name) {
+    const row = document.createElement('div');
+    row.textContent = name;
+    row.onclick = function() { goTo(name); };
+    resultsBox.appendChild(row);
+  });
+}
+
+function goTo(name) {
+  const info = markerByName[name];
+  if (!info) return;
+  map.setView([info.lat, info.lon], 14, { animate: true });
+  clusterGroup.zoomToShowLayer(info.marker, function() {
+    info.marker.openPopup();
+  });
+  resultsBox.innerHTML = '';
+  input.value = name;
+}
+
+input.addEventListener('input', function() {
+  const q = input.value.trim();
+  if (!q) { resultsBox.innerHTML = ''; return; }
+  const matches = names.filter(n => n.includes(q));
+  renderResults(matches);
+});
+
+input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const q = input.value.trim();
+    const matches = names.filter(n => n.includes(q));
+    if (matches.length > 0) goTo(matches[0]);
+  }
+});
+</script>
+</body>
+</html>
